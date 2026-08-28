@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Field Notes — A Photo Journal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,600;1,9..144,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --charcoal:#16140f;
+    --charcoal-deep:#0a0908;
+    --cream:#ede7d9;
+    --cream-dim:#c9c2ae;
+    --amber:#e8a33d;
+    --rust:#b23a24;
+    --olive:#6b7255;
+    --frame-w: 34px;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--charcoal);
+    color:var(--cream);
+    font-family:'Space Mono', monospace;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* ---------- sprocket rails ---------- */
+  .rail{
+    position:fixed; top:0; bottom:0; width:var(--frame-w);
+    background-image: repeating-linear-gradient(
+      to bottom,
+      var(--charcoal-deep) 0px, var(--charcoal-deep) 14px,
+      transparent 14px, transparent 28px
+    );
+    background-color: #100e0a;
+    z-index:5;
+  }
+  .rail::before, .rail::after{ content:''; }
+  .rail.left{ left:0; border-right:1px solid #000; }
+  .rail.right{ right:0; border-left:1px solid #000; }
+  .rail .hole{
+    position:absolute; left:50%; transform:translateX(-50%);
+    width:12px; height:9px; background:var(--charcoal);
+    border-radius:2px;
+  }
+
+  main{ padding: 48px var(--frame-w) 80px; max-width:1180px; margin:0 auto; }
+
+  /* ---------- header ---------- */
+  header{ margin-bottom:44px; }
+  .eyebrow{
+    font-size:11px; letter-spacing:.28em; text-transform:uppercase;
+    color:var(--amber); margin-bottom:10px;
+  }
+  h1{
+    font-family:'Fraunces', serif; font-weight:600; font-style:italic;
+    font-size:clamp(38px, 7vw, 72px); line-height:0.95; margin:0 0 14px;
+    color:var(--cream);
+  }
+  header p.sub{
+    color:var(--cream-dim); max-width:460px; font-size:13px; line-height:1.7; margin:0;
+  }
+
+  /* ---------- filters ---------- */
+  .filters{
+    display:flex; flex-wrap:wrap; gap:10px; margin-top:32px;
+  }
+  .filters button{
+    font-family:'Space Mono', monospace; font-size:11px; letter-spacing:.12em;
+    text-transform:uppercase; background:transparent; color:var(--cream-dim);
+    border:1px solid #423c30; padding:9px 16px; border-radius:999px;
+    cursor:pointer; transition: all .25s ease;
+  }
+  .filters button:hover{ color:var(--cream); border-color:var(--amber); }
+  .filters button.active{
+    background:var(--amber); color:var(--charcoal-deep); border-color:var(--amber);
+    font-weight:700;
+  }
+
+  /* ---------- grid ---------- */
+  .grid{
+    display:grid; grid-template-columns:repeat(3, 1fr); gap:18px; margin-top:40px;
+  }
+  .cell{
+    position:relative; overflow:hidden; background:#0d0b08; cursor:pointer;
+    aspect-ratio:4/5; border:1px solid #2a251c;
+    width:100%; padding:0; color:inherit; font:inherit; text-align:left;
+    opacity:0; transform:translateY(14px);
+    animation: rise .5s ease forwards;
+  }
+  @keyframes rise{ to{ opacity:1; transform:translateY(0); } }
+  .cell .art{
+    width:100%; height:100%; display:block;
+    filter:grayscale(35%) contrast(1.05);
+    transform:scale(1.04);
+    transition: transform .6s cubic-bezier(.2,.7,.2,1), filter .5s ease;
+  }
+  .cell .art svg{ width:100%; height:100%; display:block; }
+  .cell .art img, .lb-art img{ width:100%; height:100%; display:block; object-fit:cover; }
+  .cell:hover .art{ transform:scale(1.13); filter:grayscale(0%) contrast(1.05); }
+  .cell:focus-visible{ outline:2px solid var(--amber); outline-offset:3px; }
+
+  .cell .frame-tag{
+    position:absolute; top:10px; left:10px;
+    font-size:10px; letter-spacing:.14em; color:var(--amber);
+    background:rgba(10,9,8,.72); padding:4px 8px;
+  }
+  .cell .meta{
+    position:absolute; left:0; right:0; bottom:0; display:block; padding:14px 14px 12px;
+    background:linear-gradient(to top, rgba(10,9,8,.92), transparent);
+    transform:translateY(60%); opacity:0; transition: all .3s ease;
+  }
+  .cell:hover .meta{ transform:translateY(0); opacity:1; }
+  .cell .meta .title{ display:block; font-family:'Fraunces', serif; font-style:italic; font-size:16px; color:var(--cream); }
+  .cell .meta .cat{ display:block; font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--olive); margin-top:3px; }
+
+  .cell.hidden{ display:none; }
+
+  @media (max-width: 860px){
+    .grid{ grid-template-columns:repeat(2, 1fr); }
+  }
+  @media (max-width: 520px){
+    .grid{ grid-template-columns:1fr; }
+    :root{ --frame-w:14px; }
+    main{ padding:34px 14px 60px; }
+  }
+
+  /* ---------- lightbox ---------- */
+  .lightbox{
+    position:fixed; inset:0; background:rgba(6,5,4,.96); z-index:50;
+    display:flex; align-items:center; justify-content:center;
+    opacity:0; pointer-events:none; transition:opacity .3s ease;
+  }
+  .lightbox.open{ opacity:1; pointer-events:auto; }
+  .lightbox-inner{
+    position:relative; max-width:min(90vw, 980px); width:100%; padding:0 70px;
+  }
+  .lightbox figure{ margin:0; }
+  .lb-art{
+    width:100%; aspect-ratio:4/5; max-height:calc(100vh - 126px); display:block;
+    border:1px solid #2a251c; background:#0d0b08;
+    opacity:0; transform:scale(.98); transition: all .35s ease;
+    overflow:hidden;
+  }
+  .lb-art svg{ width:100%; height:100%; display:block; }
+  .lightbox.open .lb-art.show{ opacity:1; transform:scale(1); }
+  .lightbox figcaption{
+    display:flex; justify-content:space-between; align-items:baseline;
+    margin-top:16px; color:var(--cream-dim); font-size:11px; letter-spacing:.08em;
+  }
+  .lightbox figcaption .cap-title{ font-family:'Fraunces', serif; font-style:italic; color:var(--cream); font-size:18px; letter-spacing:0; }
+  .lightbox figcaption .counter{ color:var(--amber); }
+
+  .lb-btn{
+    position:absolute; top:50%; transform:translateY(-50%);
+    background:transparent; border:1px solid #423c30; color:var(--cream);
+    width:44px; height:44px; border-radius:50%; cursor:pointer;
+    font-size:18px; display:flex; align-items:center; justify-content:center;
+    transition: all .2s ease;
+  }
+  .lb-btn:hover{ border-color:var(--amber); color:var(--amber); }
+  .lb-prev{ left:0; }
+  .lb-next{ right:0; }
+
+  .lb-close{
+    position:absolute; top:-52px; right:0; background:transparent; border:none;
+    color:var(--cream-dim); font-size:13px; letter-spacing:.14em; text-transform:uppercase;
+    cursor:pointer; font-family:'Space Mono', monospace;
+  }
+  .lb-close:hover{ color:var(--rust); }
+
+  @media (max-width:640px){
+    .lightbox-inner{ padding:0 46px; }
+    .lb-btn{ width:36px; height:36px; }
+  }
+
+  footer{
+    max-width:1180px; margin:0 auto; padding:0 var(--frame-w) 40px;
+    color:#544d3d; font-size:10px; letter-spacing:.1em; text-transform:uppercase;
+  }
+</style>
+</head>
+<body>
+
+<div class="rail left" id="railLeft"></div>
+<div class="rail right" id="railRight"></div>
+
+<main>
+  <header>
+    <div class="eyebrow">CodeAlpha · Frontend Task 01</div>
+    <h1>Field Notes</h1>
+    <p class="sub">A running photo journal, shot on whatever was in hand. Sixteen frames, four rolls. Click any frame to step through the strip.</p>
+
+    <div class="filters" id="filters">
+      <button type="button" data-filter="all" class="active" aria-pressed="true">All Frames</button>
+      <button type="button" data-filter="nature" aria-pressed="false">Nature</button>
+      <button type="button" data-filter="urban" aria-pressed="false">Urban</button>
+      <button type="button" data-filter="portrait" aria-pressed="false">Portrait</button>
+      <button type="button" data-filter="travel" aria-pressed="false">Travel</button>
+    </div>
+  </header>
+
+  <section class="grid" id="grid" aria-label="Field Notes photo gallery"></section>
+</main>
+
+<footer>Field Notes — a browser gallery — built with HTML, CSS &amp; JavaScript</footer>
+
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-labelledby="lbTitle" aria-hidden="true">
+  <div class="lightbox-inner">
+    <button type="button" class="lb-close" id="lbClose" aria-label="Close photo viewer">Close ✕</button>
+    <button type="button" class="lb-btn lb-prev" id="lbPrev" aria-label="Previous photo">‹</button>
+    <button type="button" class="lb-btn lb-next" id="lbNext" aria-label="Next photo">›</button>
+    <figure>
+      <div id="lbArt" class="lb-art"></div>
+      <figcaption>
+        <span class="cap-title" id="lbTitle"></span>
+        <span class="counter" id="lbCounter" aria-live="polite"></span>
+      </figcaption>
+    </figure>
+  </div>
+</div>
+
+<script>
+  const photos = [
+    { seed: "ridge-line",       title: "Ridge Line",       cat: "nature",   src: "images/ridge-line.jpg" },
+    { seed: "valley-fog",       title: "Low Valley Fog",   cat: "nature",   src: "images/valley-fog.jpg" },
+    { seed: "coast-break",      title: "Coast Break",      cat: "nature",   src: "images/coast-break.jpg" },
+    { seed: "pine-corridor",    title: "Pine Corridor",    cat: "nature",   src: "images/pine-corridor.jpg" },
+    { seed: "downtown-grid",    title: "Downtown Grid",    cat: "urban",    src: "images/downtown-grid.jpg" },
+    { seed: "concrete-stair",   title: "Concrete Stair",   cat: "urban",    src: "images/concrete-stair.jpg" },
+    { seed: "night-signal",     title: "Night Signal",     cat: "urban",    src: "images/night-signal.jpg" },
+    { seed: "overpass",         title: "Overpass",         cat: "urban",    src: "images/overpass.jpg" },
+    { seed: "quiet-study",      title: "Quiet Study",      cat: "portrait", src: "images/quiet-study.jpg" },
+    { seed: "window-light",     title: "Window Light",     cat: "portrait", src: "images/window-light.jpg" },
+    { seed: "half-turn",        title: "Half-turn",        cat: "portrait", src: "images/half-turn.jpg" },
+    { seed: "station-bench",    title: "Station Bench",    cat: "portrait", src: "images/station-bench.jpg" },
+    { seed: "departure-gate",   title: "Departure Gate",   cat: "travel",   src: "images/departure-gate.jpg" },
+    { seed: "market-road",      title: "Market Road",      cat: "travel",   src: "images/market-road.jpg" },
+    { seed: "mountain-pass",    title: "Mountain Pass",    cat: "travel",   src: "images/mountain-pass.jpg" },
+    { seed: "harbor-town",      title: "Harbor Town",      cat: "travel",   src: "images/harbor-town.jpg" },
+  ];
+
+  const grid = document.getElementById('grid');
+
+  function frameLabel(n){
+    return 'FR·' + String(n).padStart(2,'0');
+  }
+
+  // ---------- deterministic pseudo-random from a seed string ----------
+  function hash(str){
+    let h = 0;
+    for (let i = 0; i < str.length; i++){ h = (h * 31 + str.charCodeAt(i)) >>> 0; }
+    return h;
+  }
+  function rand(seed, i){
+    const x = Math.sin(hash(seed) + i * 999) * 10000;
+    return x - Math.floor(x);
+  }
+
+  const PALETTE = {
+    nature:   { a: '#3c4a2f', b: '#6b7255', c: '#e8a33d' },
+    urban:    { a: '#22201a', b: '#423c30', c: '#b23a24' },
+    portrait: { a: '#2c261c', b: '#6b5a3d', c: '#e8a33d' },
+    travel:   { a: '#2a2f3c', b: '#5a6a7a', c: '#b23a24' },
+  };
+
+  // Procedural "exposure" art per category — no network dependency, purely vector.
+  function makeArt(p, w, h){
+    if (p.src){
+      return `<img src="${p.src}" alt="${p.title}" loading="lazy" decoding="async">`;
+    }
+    const pal = PALETTE[p.cat];
+    const r1 = rand(p.seed, 1), r2 = rand(p.seed, 2), r3 = rand(p.seed, 3), r4 = rand(p.seed, 4);
+    let shapes = '';
+
+    if (p.cat === 'nature'){
+      const horizon = h * (0.55 + r1 * 0.15);
+      shapes += `<rect x="0" y="0" width="${w}" height="${horizon}" fill="url(#sky-${p.seed})"/>`;
+      shapes += `<rect x="0" y="${horizon}" width="${w}" height="${h-horizon}" fill="${pal.a}"/>`;
+      shapes += `<circle cx="${w*(0.2+r2*0.6)}" cy="${horizon*0.5}" r="${w*0.06}" fill="${pal.c}" opacity="0.85"/>`;
+      for (let i=0;i<4;i++){
+        const rx = w*rand(p.seed,10+i);
+        const ry = horizon - i*8 - rand(p.seed,20+i)*10;
+        shapes += `<polygon points="${rx-40},${horizon} ${rx},${ry-70} ${rx+40},${horizon}" fill="${pal.b}" opacity="${0.5+i*0.1}"/>`;
+      }
+    } else if (p.cat === 'urban'){
+      shapes += `<rect x="0" y="0" width="${w}" height="${h}" fill="${pal.a}"/>`;
+      const cols = 6, rows = 8;
+      for (let cx=0; cx<cols; cx++){
+        const bw = w/cols;
+        const bh = h * (0.4 + rand(p.seed, cx+30)*0.55);
+        shapes += `<rect x="${cx*bw+4}" y="${h-bh}" width="${bw-8}" height="${bh}" fill="${pal.b}" opacity="0.9"/>`;
+        for (let ry=0; ry<rows; ry++){
+          if (rand(p.seed, cx*20+ry) > 0.55){
+            const wy = h - bh + 14 + ry*(bh/rows);
+            if (wy < h-10) shapes += `<rect x="${cx*bw+12}" y="${wy}" width="10" height="8" fill="${pal.c}" opacity="0.8"/>`;
+          }
+        }
+      }
+    } else if (p.cat === 'portrait'){
+      shapes += `<rect x="0" y="0" width="${w}" height="${h}" fill="${pal.a}"/>`;
+      shapes += `<ellipse cx="${w/2}" cy="${h*0.42}" rx="${w*0.24}" ry="${h*0.3}" fill="url(#glow-${p.seed})"/>`;
+      shapes += `<ellipse cx="${w*(0.4+r3*0.2)}" cy="${h*0.9}" rx="${w*0.4}" ry="${h*0.3}" fill="${pal.b}" opacity="0.5"/>`;
+    } else {
+      shapes += `<rect x="0" y="0" width="${w}" height="${h}" fill="url(#sky-${p.seed})"/>`;
+      const horizon = h * (0.6 + r4*0.1);
+      shapes += `<rect x="0" y="${horizon}" width="${w}" height="${h-horizon}" fill="${pal.b}"/>`;
+      shapes += `<polygon points="${w*0.15},${horizon} ${w*0.35},${horizon-h*0.22} ${w*0.55},${horizon}" fill="${pal.a}"/>`;
+      shapes += `<polygon points="${w*0.45},${horizon} ${w*0.68},${horizon-h*0.15} ${w*0.9},${horizon}" fill="${pal.a}" opacity="0.85"/>`;
+      shapes += `<circle cx="${w*0.78}" cy="${horizon*0.35}" r="${w*0.045}" fill="${pal.c}"/>`;
+    }
+
+    // fine grain speckle for a film feel
+    let grain = '';
+    for (let i=0;i<40;i++){
+      const gx = rand(p.seed, 100+i)*w, gy = rand(p.seed, 200+i)*h;
+      grain += `<circle cx="${gx}" cy="${gy}" r="0.7" fill="#000" opacity="${0.04+rand(p.seed,300+i)*0.05}"/>`;
+    }
+
+    return `
+      <svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+        <defs>
+          <linearGradient id="sky-${p.seed}" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="${pal.c}" stop-opacity="0.55"/>
+            <stop offset="100%" stop-color="${pal.a}"/>
+          </linearGradient>
+          <radialGradient id="glow-${p.seed}" cx="50%" cy="35%" r="65%">
+            <stop offset="0%" stop-color="${pal.c}" stop-opacity="0.7"/>
+            <stop offset="100%" stop-color="${pal.a}" stop-opacity="0"/>
+          </radialGradient>
+        </defs>
+        ${shapes}
+        ${grain}
+      </svg>`;
+  }
+
+  photos.forEach((p, i) => {
+    const cell = document.createElement('button');
+    cell.type = 'button';
+    cell.className = 'cell';
+    cell.dataset.cat = p.cat;
+    cell.dataset.index = i;
+    cell.setAttribute('aria-label', `Open ${p.title}, ${p.cat}, ${frameLabel(i + 1)}`);
+    cell.style.animationDelay = (i * 0.03) + 's';
+    cell.innerHTML = `
+      <span class="frame-tag">${frameLabel(i+1)}</span>
+      <span class="art">${makeArt(p, 700, 860)}</span>
+      <span class="meta">
+        <span class="title">${p.title}</span>
+        <span class="cat">${p.cat}</span>
+      </span>
+    `;
+    cell.addEventListener('click', () => openLightbox(i, cell));
+    grid.appendChild(cell);
+  });
+
+  // ---------- filters ----------
+  const filterBtns = document.querySelectorAll('.filters button');
+  filterBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      filterBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      filterBtns.forEach(b => b.setAttribute('aria-pressed', String(b === btn)));
+      const f = btn.dataset.filter;
+      document.querySelectorAll('.cell').forEach(cell => {
+        cell.classList.toggle('hidden', f !== 'all' && cell.dataset.cat !== f);
+      });
+    });
+  });
+
+  // ---------- lightbox ----------
+  const lightbox = document.getElementById('lightbox');
+  const lbArt = document.getElementById('lbArt');
+  const lbTitle = document.getElementById('lbTitle');
+  const lbCounter = document.getElementById('lbCounter');
+  let current = 0;
+
+  function visibleIndices(){
+    return [...document.querySelectorAll('.cell')]
+      .filter(c => !c.classList.contains('hidden'))
+      .map(c => Number.parseInt(c.dataset.index, 10));
+  }
+
+  let opener = null;
+  let previousOverflow = '';
+
+  function openLightbox(index, source){
+    if (!Number.isInteger(index) || !photos[index]) return;
+    current = index;
+    opener = source || document.activeElement;
+    previousOverflow = document.body.style.overflow;
+    renderLightbox();
+    lightbox.classList.add('open');
+    lightbox.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+    document.getElementById('lbClose').focus();
+  }
+
+  function renderLightbox(){
+    const p = photos[current];
+    lbArt.classList.remove('show');
+    lbArt.innerHTML = makeArt(p, 900, 1120);
+    requestAnimationFrame(() => lbArt.classList.add('show'));
+    lbTitle.textContent = p.title;
+    const vis = visibleIndices();
+    const pos = vis.indexOf(current) + 1;
+    lbCounter.textContent = `${frameLabel(current+1)} — ${pos}/${vis.length}`;
+  }
+
+  function step(dir){
+    const vis = visibleIndices();
+    if (!vis.length) return;
+    let pos = vis.indexOf(current);
+    pos = (pos + dir + vis.length) % vis.length;
+    current = vis[pos];
+    renderLightbox();
+  }
+
+  function closeLightbox(){
+    lightbox.classList.remove('open');
+    lightbox.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = previousOverflow;
+    if (opener && opener.isConnected) opener.focus();
+  }
+
+  document.getElementById('lbPrev').addEventListener('click', () => step(-1));
+  document.getElementById('lbNext').addEventListener('click', () => step(1));
+  document.getElementById('lbClose').addEventListener('click', closeLightbox);
+  lightbox.addEventListener('click', (e) => { if (e.target === lightbox) closeLightbox(); });
+
+  document.addEventListener('keydown', (e) => {
+    if (!lightbox.classList.contains('open')) return;
+    if (e.key === 'ArrowRight') step(1);
+    if (e.key === 'ArrowLeft') step(-1);
+    if (e.key === 'Escape') closeLightbox();
+  });
+
+  // ---------- sprocket holes ----------
+  function buildRail(el){
+    el.innerHTML = '';
+    const count = Math.ceil(window.innerHeight / 28) + 2;
+    for (let i = 0; i < count; i++){
+      const h = document.createElement('div');
+      h.className = 'hole';
+      h.style.top = (i * 28 + 7) + 'px';
+      el.appendChild(h);
+    }
+  }
+  const railLeft = document.getElementById('railLeft');
+  const railRight = document.getElementById('railRight');
+  buildRail(railLeft); buildRail(railRight);
+  window.addEventListener('resize', () => { buildRail(railLeft); buildRail(railRight); });
+</script>
+
+</body>
+</html>
+
+
