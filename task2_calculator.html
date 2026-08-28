@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arc Calculator</title>
+<style>
+:root{--bg:#101319;--panel:#1b2230;--keys:#283244;--ink:#f4f5f7;--muted:#aab3c4;--mint:#70e2a8;--red:#ff9292}
+*{box-sizing:border-box} body{min-width:320px;min-height:100vh;margin:0;display:grid;place-items:center;padding:20px;background:radial-gradient(circle at 15% 15%,#34745a88,transparent 28rem),radial-gradient(circle at 85% 85%,#40558588,transparent 25rem),var(--bg);color:var(--ink);font-family:Inter,system-ui,sans-serif}
+.calculator{width:min(100%,390px);overflow:hidden;border:1px solid #ffffff1c;border-radius:28px;background:linear-gradient(145deg,#293347,#151a24);box-shadow:0 28px 80px #0008}
+.top{display:flex;justify-content:space-between;padding:22px 24px 7px;color:var(--muted);font-size:12px;font-weight:700;letter-spacing:.13em;text-transform:uppercase}.status{display:flex;gap:7px;align-items:center;letter-spacing:.08em}.dot{width:8px;height:8px;border-radius:99px;background:var(--mint);box-shadow:0 0 12px var(--mint)}
+.display{min-height:156px;padding:22px 24px 18px;display:flex;flex-direction:column;justify-content:end;text-align:right}.expression{min-height:22px;overflow:hidden;color:var(--muted);font-size:15px;white-space:nowrap;text-overflow:ellipsis}.value{margin-top:7px;overflow:hidden;font-size:clamp(42px,12vw,64px);font-weight:300;letter-spacing:-.06em;line-height:1.05;white-space:nowrap;text-overflow:ellipsis}
+.keys{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:18px;background:#07090d3b}button{min-height:60px;border:1px solid #ffffff12;border-radius:17px;background:var(--keys);color:var(--ink);cursor:pointer;font:600 20px inherit;transition:transform .16s,background-color .16s,border-color .16s}button:hover{background:#354156;border-color:#ffffff2a}button:active{transform:scale(.95)}button:focus-visible{outline:3px solid var(--mint);outline-offset:2px}.utility{background:#344055;color:#dde5ef;font-size:16px}.clear{color:var(--red)}.operator{color:var(--mint);background:#263b35}.operator.is-active,.equals{background:var(--mint);color:#10241a}.equals:hover{background:#8bf0bd}.zero{grid-column:span 2}.hint{padding:0 24px 22px;margin:0;color:#8993a5;font-size:11px;text-align:center}kbd{padding:1px 4px;border:1px solid #ffffff33;border-bottom-width:2px;border-radius:4px;color:#d2d9e4;font-family:inherit;font-size:10px}
+@media(max-width:380px){body{padding:12px}.calculator{border-radius:22px}.top{padding:18px 20px 4px}.display{min-height:137px;padding:18px 20px 16px}.keys{gap:8px;padding:14px}button{min-height:54px;border-radius:14px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<main class="calculator" aria-label="Calculator">
+  <div class="top"><span>Arc / 02</span><span class="status"><i class="dot"></i> Ready</span></div>
+  <section class="display" aria-live="polite" aria-atomic="true"><div class="expression" id="expression">&nbsp;</div><div class="value" id="display">0</div></section>
+  <section class="keys" aria-label="Calculator keys">
+    <button type="button" class="utility clear" data-action="clear" aria-label="Clear all">AC</button><button type="button" class="utility" data-action="sign" aria-label="Change sign">+/−</button><button type="button" class="utility" data-action="percent" aria-label="Percent">%</button><button type="button" class="operator" data-op="÷" aria-label="Divide">÷</button>
+    <button type="button" data-digit="7">7</button><button type="button" data-digit="8">8</button><button type="button" data-digit="9">9</button><button type="button" class="operator" data-op="×" aria-label="Multiply">×</button>
+    <button type="button" data-digit="4">4</button><button type="button" data-digit="5">5</button><button type="button" data-digit="6">6</button><button type="button" class="operator" data-op="−" aria-label="Subtract">−</button>
+    <button type="button" data-digit="1">1</button><button type="button" data-digit="2">2</button><button type="button" data-digit="3">3</button><button type="button" class="operator" data-op="+" aria-label="Add">+</button>
+    <button type="button" class="zero" data-digit="0">0</button><button type="button" data-action="decimal" aria-label="Decimal point">.</button><button type="button" class="equals" data-action="equals" aria-label="Equals">=</button>
+  </section>
+  <p class="hint">Keyboard: <kbd>0–9</kbd> <kbd>+ − × ÷</kbd> <kbd>Enter</kbd> <kbd>Esc</kbd></p>
+</main>
+<script>
+(()=>{'use strict';
+const display=document.querySelector('#display'),expression=document.querySelector('#expression'),opButtons=[...document.querySelectorAll('[data-op]')];
+let current='0',stored=null,op=null,replace=false,justEvaluated=false;
+function shown(n){if(!Number.isFinite(n))return'Error';const rounded=Number(n.toPrecision(12));return Object.is(rounded,-0)?'0':String(rounded)}
+function solve(a,operator,b){return operator==='+'?a+b:operator==='−'?a-b:operator==='×'?a*b:operator==='÷'?(b===0?NaN:a/b):b}
+function update(){display.textContent=current;opButtons.forEach(b=>b.classList.toggle('is-active',b.dataset.op===op));if(stored!==null&&op){let preview=replace?'':' = '+shown(solve(stored,op,Number(current)));expression.textContent=shown(stored)+' '+op+preview}else expression.innerHTML='&nbsp;'}
+function clear(){current='0';stored=null;op=null;replace=false;justEvaluated=false;update()}
+function error(){current='Error';stored=null;op=null;replace=true;justEvaluated=true;update()}
+function digit(n){if(current==='Error'||replace||justEvaluated){current=n;replace=false;justEvaluated=false}else current=current==='0'?n:current+n;update()}
+function decimal(){if(current==='Error'||replace||justEvaluated){current='0.';replace=false;justEvaluated=false}else if(!current.includes('.'))current+='.';update()}
+function choose(operator){if(current==='Error')return clear();const value=Number(current);if(stored!==null&&op&&!replace){const answer=solve(stored,op,value);if(!Number.isFinite(answer))return error();stored=Number(shown(answer));current=shown(stored)}else stored=value;op=operator;replace=true;justEvaluated=false;update()}
+function equals(){if(stored===null||!op||current==='Error')return;const left=shown(stored),right=current,answer=solve(stored,op,Number(current));if(!Number.isFinite(answer))return error();current=shown(answer);expression.textContent=left+' '+op+' '+right+' =';stored=null;op=null;replace=true;justEvaluated=true;opButtons.forEach(b=>b.classList.remove('is-active'));display.textContent=current}
+function sign(){if(current==='Error')return clear();if(current!=='0')current=current.startsWith('-')?current.slice(1):'-'+current;update()}
+function percent(){if(current==='Error')return clear();current=shown(Number(current)/100);replace=false;update()}
+function backspace(){if(current==='Error'||replace||justEvaluated)return;current=current.length<=1||(current.length===2&&current[0]==='-')?'0':current.slice(0,-1);update()}
+document.querySelector('.keys').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.digit)digit(b.dataset.digit);else if(b.dataset.op)choose(b.dataset.op);else if(b.dataset.action==='decimal')decimal();else if(b.dataset.action==='equals')equals();else if(b.dataset.action==='clear')clear();else if(b.dataset.action==='sign')sign();else if(b.dataset.action==='percent')percent()});
+document.addEventListener('keydown',e=>{const k=e.key;if(/^\\d$/.test(k))digit(k);else if(k==='.')decimal();else if('+-*/'.includes(k)){e.preventDefault();choose({'+':'+','-':'−','*':'×','/':'÷'}[k])}else if(k==='Enter'||k==='='){e.preventDefault();equals()}else if(k==='Escape'||k.toLowerCase()==='c')clear();else if(k==='Backspace'){e.preventDefault();backspace()}});
+update()})();
+</script>
+</body>
+</html>
